@@ -16,6 +16,7 @@
 
 import collections
 from pycoral.adapters import common
+import numpy as np
 
 Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
 """Represents a detected object.
@@ -181,18 +182,17 @@ class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
     return area / (a.area + b.area - area)
 
 
+
 def get_objects(interpreter, input_interpreter  =None,
                 score_threshold=-float('inf'),
                 image_scale=(1.0, 1.0)):
   """Gets results from a detection model as a list of detected objects.
-
   Args:
     interpreter: The ``tf.lite.Interpreter`` to query for results.
     score_threshold (float): The score threshold for results. All returned
       results have a score greater-than-or-equal-to this value.
     image_scale (float, float): Scaling factor to apply to the bounding boxes as
       (x-scale-factor, y-scale-factor), where each factor is from 0 to 1.0.
-
   Returns:
     A list of :obj:`Object` objects, which each contains the detected object's
     id, score, and bounding box as :obj:`BBox`.
@@ -221,6 +221,12 @@ def get_objects(interpreter, input_interpreter  =None,
     boxes = common.output_tensor(interpreter, 1)[0]
     count = (int)(common.output_tensor(interpreter, 2)[0])
     class_ids = common.output_tensor(interpreter, 3)[0]
+  # import numpy as np
+  # print('scores',np.shape(scores), scores)
+  # print('boxes', np.shape(boxes), boxes)
+  # print('count', np.shape(count), count)
+  # print('class_ids', np.shape(class_ids), class_ids)
+
   if not input_interpreter:
       width, height = common.input_size(interpreter)
   else:
@@ -236,5 +242,25 @@ def get_objects(interpreter, input_interpreter  =None,
         score=float(scores[i]),
         bbox=BBox(xmin=xmin, ymin=ymin, xmax=xmax,
                   ymax=ymax).scale(sx, sy).map(int))
-
+  # print(scores)
   return [make(i) for i in range(len(scores)) if scores[i] >= score_threshold]
+
+
+def get_pipeline_objects(results,  input_interpreter, score_threshold=-float('inf'), image_scale=(1.0, 1.0)):
+    results = list(results.values())
+    boxes = results[0][::4].reshape([25,4])
+    class_ids = results[1][::4]
+    scores =results[2][::4]
+    count = int(results[3][0])
+    width, height = common.input_size(input_interpreter)
+    image_scale_x, image_scale_y = image_scale
+    sx, sy = width / image_scale_x, height / image_scale_y
+    def make(i):
+        ymin, xmin, ymax, xmax = boxes[i]
+        return Object(
+            id=int(class_ids[i]),
+            score=float(scores[i]),
+            bbox=BBox(xmin=xmin, ymin=ymin, xmax=xmax,
+                      ymax=ymax).scale(sx, sy).map(int))
+
+    return [make(i) for i in range(len(scores)) if scores[i] >= score_threshold]

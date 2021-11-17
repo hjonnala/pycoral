@@ -164,11 +164,15 @@ def main():
         result = runner.pop()
         if not result:
             break
-        try:
-          objs = detect.get_objects(runner.interpreters()[-1], input_interpreter=runner.interpreters()[0], score_threshold=args.threshold,
-                                    image_scale=scale)
-        except Exception as Error:
-          print(f"object detection error:{str(Error)}")
+        # try:
+        #     objs = detect.get_objects(runner.interpreters()[-1], input_interpreter=runner.interpreters()[0],
+        #                               score_threshold=args.threshold,
+        #                               image_scale=scale)
+        # except Exception as Error:
+        #     print(f"object detection error:{str(Error)}")
+
+        objs = detect.get_pipeline_objects(result, runner.interpreters()[0], score_threshold=args.threshold,
+                                           image_scale=scale)
 
     print('-------RESULTS--------')
     if not objs:
