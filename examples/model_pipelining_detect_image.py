@@ -161,15 +161,15 @@ def main():
 
   def consumer():
     while True:
+        result = runner.pop()
+        if not result:
+            break
         try:
-          objs = detect.get_objects(output_interpreter, input_interpreter=input_interpreter, score_threshold=args.threshold,
+          objs = detect.get_objects(runner.interpreters()[-1], input_interpreter=runner.interpreters()[0], score_threshold=args.threshold,
                                     image_scale=scale)
         except Exception as Error:
           print(f"object detection error:{str(Error)}")
 
-        result = runner.pop()
-        if not result:
-            break
     print('-------RESULTS--------')
     if not objs:
       print('No objects detected')
@@ -179,6 +179,8 @@ def main():
       print('  id:    ', obj.id)
       print('  score: ', obj.score)
       print('  bbox:  ', obj.bbox)
+
+
 
     if args.output and objs:
       image = Image.open(args.input)
